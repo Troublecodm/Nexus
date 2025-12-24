@@ -34,154 +34,112 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = "adminpanel-9b439";
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [sites, setSites] = useState([]);
-  const [broadcast, setBroadcast] = useState({ message: '', active: false, maintenance: false });
-  const [isAddModalOpen, setAddModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newSite, setNewSite] = useState({ name: '', url: '', group: 'default' });
 
-  // Inject cyberpunk global styles
+  useEffect(() => {
+    return onAuthStateChanged(auth, setUser);
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'artifacts', 'adminpanel-9b439', 'public', 'data', 'sites'), orderBy('lastSync', 'desc'));
+    return onSnapshot(q, snap => {
+      setSites(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+  }, [user]);
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    if (!newSite.name || !newSite.url) return;
+    await addDoc(collection(db, 'artifacts', 'adminpanel-9b439', 'public', 'data', 'sites'), {
+      ...newSite,
+      status: 'offline',
+      nexusKey: `NX-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+      lastSync: serverTimestamp(),
+      group: newSite.group || 'default'
+    });
+    setNewSite({ name: '', url: '', group: 'default' });
+    setIsAddModalOpen(false);
+  };
+
+  const deleteSite = async (id) => {
+    await deleteDoc(doc(db, 'artifacts', 'adminpanel-9b439', 'public', 'data', 'sites', id));
+  };
+
+  // Cyberpunk CSS injection
   useEffect(() => {
     const style = document.createElement('style');
     style.innerHTML = `
-      body { margin: 0; font-family: 'Courier New', monospace; }
-      .cyber-bg {
-        background: linear-gradient(135deg, #0f0f0f, #1a0033);
-        min-height: 100vh;
-      }
-      .scanlines {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: repeating-linear-gradient(0deg, rgba(0,255,255,0.05), rgba(0,255,255,0.05) 1px, transparent 1px, transparent 2px);
-        pointer-events: none;
-        z-index: 9999;
-        opacity: 0.3;
-      }
-      .glitch {
-        position: relative;
-        color: #00ffff;
-        animation: glitch 2s infinite;
-      }
-      @keyframes glitch {
-        0% { text-shadow: 0.05em 0 0 #ff00ff, -0.05em 0 0 #00ffff; }
-        14% { text-shadow: 0.05em 0 0 #ff00ff, -0.05em 0 0 #00ffff; }
-        15% { text-shadow: -0.05em -0.05em 0 #ff00ff, 0.05em 0.05em 0 #00ffff; }
-        49% { text-shadow: -0.05em -0.05em 0 #ff00ff, 0.05em 0.05em 0 #00ffff; }
-        50% { text-shadow: 0.025em 0.05em 0 #ff00ff, -0.025em -0.05em 0 #00ffff; }
-        99% { text-shadow: 0.025em 0.05em 0 #ff00ff, -0.025em -0.05em 0 #00ffff; }
-        100% { text-shadow: -0.025em 0 0 #ff00ff, 0.025em 0 0 #00ffff; }
-      }
-      .glow {
-        box-shadow: 0 0 20px #00ffff, 0 0 40px #ff00ff;
-      }
-      .card {
-        background: rgba(15, 15, 15, 0.8);
-        backdrop-filter: blur(20px);
-        border: 1px solid #00ffff44;
-        transition: all 0.5s;
-      }
-      .card:hover {
-        transform: translateY(-10px);
-        box-shadow: 0 0 50px #ff00ff88;
-        border-color: #ff00ff;
-      }
-      .btn-neon {
-        background: linear-gradient(45deg, #ff00ff, #00ffff);
-        color: black;
-        font-weight: bold;
-        padding: 15px 30px;
-        border: none;
-        border-radius: 50px;
-        cursor: pointer;
-        transition: all 0.3s;
-        box-shadow: 0 0 30px #ff00ff88;
-      }
-      .btn-neon:hover {
-        transform: scale(1.1);
-        box-shadow: 0 0 60px #00ffff;
-      }
-      .input-neon {
-        background: rgba(0,0,0,0.5);
-        border: 2px solid #00ffff;
-        color: #00ffff;
-        padding: 15px;
-        border-radius: 15px;
-        width: 100%;
-      }
-      .input-neon:focus {
-        outline: none;
-        box-shadow: 0 0 20px #00ffff;
-        border-color: #ff00ff;
-      }
+      body { margin: 0; font-family: 'Courier New', monospace; overflow-x: hidden; }
+      .cyber-bg { background: linear-gradient(135deg, #000000, #0f0020); min-height: 100vh; position: relative; }
+      .scanlines { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: repeating-linear-gradient(0deg, rgba(0,255,255,0.03), rgba(0,255,255,0.03) 1px, transparent 1px, transparent 2px); pointer-events: none; z-index: 9999; opacity: 0.5; }
+      .glitch { position: relative; color: #00ffff; animation: glitch 2s infinite; }
+      @keyframes glitch { 0% { text-shadow: 0.05em 0 0 #ff00ff, -0.05em 0 0 #00ffff; } 14% { text-shadow: 0.05em 0 0 #ff00ff, -0.05em 0 0 #00ffff; } 15% { text-shadow: -0.05em -0.05em 0 #ff00ff, 0.05em 0.05em 0 #00ffff; } 49% { text-shadow: -0.05em -0.05em 0 #ff00ff, 0.05em 0.05em 0 #00ffff; } 50% { text-shadow: 0.025em 0.05em 0 #ff00ff, -0.025em -0.05em 0 #00ffff; } 99% { text-shadow: 0.025em 0.05em 0 #ff00ff, -0.025em -0.05em 0 #00ffff; } 100% { text-shadow: -0.025em 0 0 #ff00ff, 0.025em 0 0 #00ffff; } }
+      .glow { box-shadow: 0 0 30px #00ffff, 0 0 60px #ff00ff; }
+      .card { background: rgba(10, 10, 30, 0.8); backdrop-filter: blur(20px); border: 1px solid #00ffff44; transition: all 0.5s; }
+      .card:hover { transform: translateY(-15px); box-shadow: 0 0 80px #ff00ff88; border-color: #ff00ff; }
+      .btn-neon { background: linear-gradient(45deg, #ff00ff, #00ffff); color: black; font-weight: bold; padding: 15px 40px; border: none; border-radius: 50px; cursor: pointer; transition: all 0.3s; box-shadow: 0 0 40px #ff00ff88; }
+      .btn-neon:hover { transform: scale(1.1); box-shadow: 0 0 80px #00ffff; }
+      .input-neon { background: rgba(0,0,0,0.6); border: 2px solid #00ffff; color: #00ffff; padding: 20px; border-radius: 20px; width: 100%; font-size: 1.5rem; }
+      .input-neon:focus { outline: none; box-shadow: 0 0 30px #00ffff; border-color: #ff00ff; }
     `;
     document.head.appendChild(style);
     return () => document.head.removeChild(style);
   }, []);
 
-  useEffect(() => onAuthStateChanged(auth, setUser), []);
-
-  // Rest of your logic (heartbeat, data loading, etc.) remains the same
-
   if (!user) return <LoginPage />;
 
   return (
-    <div className="cyber-bg relative">
+    <div className="cyber-bg">
       <div className="scanlines"></div>
-      <div className="relative z-10 p-8">
-        <h1 className="text-center text-6xl font-black glitch mb-16" data-text="NEXUS CONTROL">
-          NEXUS CONTROL
+      <div className="relative z-10 p-10">
+        <h1 className="text-center text-7xl font-black glitch mb-20" data-text="NEXUS">
+          NEXUS
         </h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 max-w-7xl mx-auto">
           {sites.map(site => (
-            <div key={site.id} className="card p-10 rounded-3xl relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 to-cyan-900/20"></div>
-              <div className="relative z-10 text-center">
-                <Globe size={80} className="mx-auto mb-6 text-cyan-400 glow" />
-                <h3 className="text-3xl font-black mb-4 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-400">
-                  {site.name}
-                </h3>
-                <p className="text-gray-400 mb-8">{site.url}</p>
-                <div className="text-4xl font-black mb-6" style={{ color: site.status === 'online' ? '#00ff00' : '#ff0000' }}>
-                  {site.status.toUpperCase()}
-                </div>
-                {site.status === 'offline' && <AlertTriangle size={60} className="mx-auto text-red-500 animate-pulse" />}
-              </div>
-              <button onClick={() => deleteSite(site.id)} className="absolute top-6 right-6 text-red-500 hover:scale-150 transition">
-                <Trash2 size={32} />
+            <div key={site.id} className="card p-12 rounded-3xl relative">
+              <button onClick={() => deleteSite(site.id)} className="absolute top-8 right-8 text-red-500 hover:scale-150 transition">
+                <Trash2 size={36} />
               </button>
+              <Globe size={100} className="mx-auto mb-8 text-cyan-400 glow animate-pulse" />
+              <h3 className="text-4xl font-black text-center mb-4 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-400">
+                {site.name}
+              </h3>
+              <p className="text-center text-gray-400 mb-8 text-xl">{site.url}</p>
+              <div className="text-5xl font-black text-center mb-8" style={{ color: site.status === 'online' ? '#00ff00' : '#ff0000' }}>
+                {site.status.toUpperCase()}
+              </div>
+              {site.status === 'offline' && <AlertTriangle size={80} className="mx-auto text-red-500 animate-pulse" />}
             </div>
           ))}
         </div>
 
-        {/* Neon + Button */}
-        <button onClick={() => setAddModalOpen(true)} className="fixed bottom-12 right-12 btn-neon text-4xl w-20 h-20 rounded-full flex items-center justify-center animate-pulse">
-          <Plus size={48} />
+        <button onClick={() => setIsAddModalOpen(true)} className="fixed bottom-16 right-16 btn-neon text-5xl w-24 h-24 rounded-full flex items-center justify-center animate-pulse">
+          <Plus size={60} />
         </button>
 
-        {/* Add Modal with Neon Style */}
         {isAddModalOpen && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-2xl flex items-center justify-center z-50 p-8">
-            <div className="card p-12 rounded-3xl max-w-lg w-full relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 to-cyan-600/20 rounded-3xl"></div>
-              <button onClick={() => setAddModalOpen(false)} className="absolute top-8 right-8 text-cyan-400 hover:text-pink-400">
-                <Terminal size={40} />
+          <div className="fixed inset-0 bg-black/90 backdrop-blur-3xl flex items-center justify-center z-50 p-8">
+            <div className="card p-16 rounded-3xl max-w-2xl w-full relative glow">
+              <button onClick={() => setIsAddModalOpen(false)} className="absolute top-12 right-12 text-cyan-400 hover:text-pink-400">
+                <Terminal size={48} />
               </button>
-              <h2 className="text-5xl font-black text-center mb-12 glitch" data-text="DEPLOY NODE">
-                DEPLOY NODE
+              <h2 className="text-6xl font-black text-center mb-16 glitch" data-text="INITIALIZE NODE">
+                INITIALIZE NODE
               </h2>
-              <form onSubmit={handleRegister} className="space-y-8">
-                <input required placeholder="NODE NAME" className="input-neon text-2xl py-6" value={newSite.name} onChange={e => setNewSite({...newSite, name: e.target.value})} />
-                <input required type="url" placeholder="TARGET URL" className="input-neon text-2xl py-6" value={newSite.url} onChange={e => setNewSite({...newSite, url: e.target.value})} />
-                <input placeholder="GROUP TAG" className="input-neon text-2xl py-6" value={newSite.group} onChange={e => setNewSite({...newSite, group: e.target.value})} />
-                <button type="submit" className="w-full btn-neon text-4xl py-8 rounded-3xl">
-                  ACTIVATE
+              <form onSubmit={handleRegister} className="space-y-12">
+                <input required placeholder="NODE DESIGNATION" className="input-neon" value={newSite.name} onChange={e => setNewSite({...newSite, name: e.target.value})} />
+                <input required type="url" placeholder="TARGET URL" className="input-neon" value={newSite.url} onChange={e => setNewSite({...newSite, url: e.target.value})} />
+                <input placeholder="GROUP TAG" className="input-neon" value={newSite.group} onChange={e => setNewSite({...newSite, group: e.target.value})} />
+                <button type="submit" className="w-full btn-neon text-5xl py-10 rounded-3xl">
+                  DEPLOY
                 </button>
               </form>
             </div>
@@ -209,26 +167,24 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="cyber-bg min-h-screen flex items-center justify-center relative">
+    <div className="cyber-bg min-h-screen flex items-center justify-center">
       <div className="scanlines"></div>
-      <div className="relative z-10 card p-16 rounded-3xl max-w-lg w-full glow">
-        <div className="text-center mb-16">
-          <Shield size={100} className="mx-auto text-cyan-400 glow mb-8 animate-pulse" />
-          <h1 className="text-7xl font-black glitch mb-4" data-text="NEXUS_ROOT">
-            NEXUS_ROOT
-          </h1>
-          <p className="text-3xl text-cyan-300 animate-flicker">BOOT SEQUENCE INITIATED</p>
-        </div>
-        <form onSubmit={handleLogin} className="space-y-10">
-          <input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="AUTHENTICATION ID" className="input-neon text-3xl py-8" />
+      <div className="relative z-10 card p-20 rounded-3xl max-w-xl w-full glow">
+        <Shield size={120} className="mx-auto text-cyan-400 glow mb-12 animate-pulse" />
+        <h1 className="text-8xl font-black text-center mb-8 glitch" data-text="NEXUS_ROOT">
+          NEXUS_ROOT
+        </h1>
+        <p className="text-center text-3xl text-cyan-300 mb-16 animate-flicker">SYSTEM BOOT SEQUENCE</p>
+        <form onSubmit={handleLogin} className="space-y-12">
+          <input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="AUTH ID" className="input-neon" />
           <div className="relative">
-            <input required type={show ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="PASSCODE" className="input-neon text-3xl py-8" />
-            <button type="button" onClick={() => setShow(!show)} className="absolute right-10 top-10 text-cyan-400 hover:text-pink-400">
+            <input required type={show ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="PASSCODE" className="input-neon" />
+            <button type="button" onClick={() => setShow(!show)} className="absolute right-12 top-8 text-cyan-400 hover:text-pink-400">
               {show ? <EyeOff size={40} /> : <Eye size={40} />}
             </button>
           </div>
-          {error && <p className="text-red-500 text-4xl text-center font-black animate-pulse">{error}</p>}
-          <button type="submit" className="w-full btn-neon text-5xl py-10 rounded-3xl animate-pulse">
+          {error && <p className="text-red-500 text-5xl text-center font-black animate-pulse">{error}</p>}
+          <button type="submit" className="w-full btn-neon text-6xl py-12 rounded-3xl animate-pulse">
             INITIATE BOOT
           </button>
         </form>
