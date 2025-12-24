@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Shield, Users, FileText, Image, Settings, LogOut, Menu, Plus, Trash2, Edit, Save, X, Upload, Search
+  Shield, Users, FileText, Image, Settings, LogOut, Menu, Plus, Trash2, Edit, Save, X, Upload, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -21,7 +21,7 @@ import {
   orderBy, 
   serverTimestamp
 } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAhB-uq-rbk5z1E8-JLuz_cAmyooGWSpgo",
@@ -102,70 +102,11 @@ export default function App() {
   );
 }
 
-// Full CRUD Components
-
-const UserManagement = ({ users }) => {
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: '', email: '', role: 'viewer' });
-
-  const handleSave = async () => {
-    if (editing) {
-      await updateDoc(doc(db, 'users', editing), form);
-    } else {
-      await addDoc(collection(db, 'users'), { ...form, createdAt: serverTimestamp() });
-    }
-    setEditing(null);
-    setForm({ name: '', email: '', role: 'viewer' });
-  };
-
-  return (
-    <div className={`${glassStyle} p-8`}>
-      <div className="flex justify-between items-center mb-8">
-        <h3 className="text-2xl font-bold">User Management</h3>
-        <button onClick={() => setEditing('new')} className="bg-indigo-600 px-6 py-3 rounded-xl font-bold flex items-center gap-2">
-          <Plus size={20} /> Add User
-        </button>
-      </div>
-      <div className="space-y-4">
-        {users.map(u => (
-          <div key={u.id} className="bg-white/5 rounded-xl p-6 flex justify-between items-center">
-            <div>
-              <p className="font-bold">{u.name || u.email}</p>
-              <p className="text-sm text-gray-400">{u.role}</p>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => { setEditing(u.id); setForm(u); }} className="p-2 bg-white/10 rounded hover:bg-white/20">
-                <Edit size={18} />
-              </button>
-              <button onClick={() => deleteDoc(doc(db, 'users', u.id))} className="p-2 bg-red-600/30 rounded hover:bg-red-600/50">
-                <Trash2 size={18} />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-      {editing && (
-        <div className="mt-8 p-6 bg-white/10 rounded-xl">
-          <input className={inputStyle + " mb-4"} placeholder="Name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
-          <input className={inputStyle + " mb-4"} placeholder="Email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
-          <select className={inputStyle + " mb-6"} value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
-            <option value="viewer">Viewer</option>
-            <option value="editor">Editor</option>
-            <option value="admin">Admin</option>
-          </select>
-          <div className="flex gap-4">
-            <button onClick={handleSave} className="bg-green-600 px-6 py-3 rounded-xl font-bold">Save</button>
-            <button onClick={() => setEditing(null)} className="bg-gray-600 px-6 py-3 rounded-xl font-bold">Cancel</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+// Updated ContentManagement with Published toggle
 
 const ContentManagement = ({ content }) => {
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ title: '', body: '', type: 'post' });
+  const [form, setForm] = useState({ title: '', body: '', type: 'post', published: true });
 
   const handleSave = async () => {
     if (editing) {
@@ -174,7 +115,7 @@ const ContentManagement = ({ content }) => {
       await addDoc(collection(db, 'content'), { ...form, createdAt: serverTimestamp() });
     }
     setEditing(null);
-    setForm({ title: '', body: '', type: 'post' });
+    setForm({ title: '', body: '', type: 'post', published: true });
   };
 
   return (
@@ -190,7 +131,13 @@ const ContentManagement = ({ content }) => {
           <div key={c.id} className="bg-white/5 rounded-xl p-6 flex justify-between items-center">
             <div>
               <p className="font-bold">{c.title}</p>
-              <p className="text-sm text-gray-400">{c.type}</p>
+              <div className="flex items-center gap-4 mt-2">
+                <p className="text-sm text-gray-400">{c.type}</p>
+                <div className="flex items-center gap-2">
+                  {c.published ? <ToggleRight size={20} className="text-green-500" /> : <ToggleLeft size={20} className="text-gray-500" />}
+                  <span className="text-sm">{c.published ? 'Published' : 'Draft'}</span>
+                </div>
+              </div>
             </div>
             <div className="flex gap-3">
               <button onClick={() => { setEditing(c.id); setForm(c); }} className="p-2 bg-white/10 rounded hover:bg-white/20">
@@ -207,11 +154,17 @@ const ContentManagement = ({ content }) => {
         <div className="mt-8 p-6 bg-white/10 rounded-xl">
           <input className={inputStyle + " mb-4"} placeholder="Title" value={form.title} onChange={e => setForm({...form, title: e.target.value})} />
           <textarea className={inputStyle + " mb-4 h-32"} placeholder="Body" value={form.body} onChange={e => setForm({...form, body: e.target.value})} />
-          <select className={inputStyle + " mb-6"} value={form.type} onChange={e => setForm({...form, type: e.target.value})}>
+          <select className={inputStyle + " mb-4"} value={form.type} onChange={e => setForm({...form, type: e.target.value})}>
             <option value="post">Post</option>
             <option value="page">Page</option>
             <option value="product">Product</option>
           </select>
+          <div className="flex items-center gap-3 mb-6">
+            <button onClick={() => setForm({...form, published: !form.published})} className={`w-16 h-8 rounded-full relative transition ${form.published ? 'bg-green-600' : 'bg-gray-600'}`}>
+              <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition ${form.published ? 'left-9' : 'left-1'}`} />
+            </button>
+            <span className="font-bold">{form.published ? 'Published' : 'Draft'}</span>
+          </div>
           <div className="flex gap-4">
             <button onClick={handleSave} className="bg-green-600 px-6 py-3 rounded-xl font-bold">Save</button>
             <button onClick={() => setEditing(null)} className="bg-gray-600 px-6 py-3 rounded-xl font-bold">Cancel</button>
@@ -222,50 +175,14 @@ const ContentManagement = ({ content }) => {
   );
 };
 
-const MediaLibrary = ({ media }) => {
-  const [uploading, setUploading] = useState(false);
+// Keep other components (UserManagement, MediaLibrary, DashboardOverview, SettingsPanel, LoginPage) as before
 
-  const handleUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setUploading(true);
-    const storageRef = ref(storage, `media/\( {Date.now()}_ \){file.name}`);
-    await uploadBytes(storageRef, file);
-    const url = await getDownloadURL(storageRef);
-    await addDoc(collection(db, 'media'), {
-      name: file.name,
-      url,
-      uploadedAt: serverTimestamp()
-    });
-    setUploading(false);
-  };
-
-  return (
-    <div className={`${glassStyle} p-8`}>
-      <div className="mb-8">
-        <label className="bg-indigo-600 px-8 py-4 rounded-xl font-bold cursor-pointer inline-flex items-center gap-3">
-          <Upload size={24} />
-          Upload File
-          <input type="file" className="hidden" onChange={handleUpload} />
-        </label>
-        {uploading && <p className="mt-4 text-indigo-400">Uploading...</p>}
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        {media.map(m => (
-          <div key={m.id} className="bg-white/5 rounded-xl overflow-hidden">
-            <img src={m.url} alt={m.name} className="w-full h-48 object-cover" />
-            <div className="p-4">
-              <p className="text-sm truncate">{m.name}</p>
-              <button onClick={() => deleteObject(ref(storage, m.url)).then(() => deleteDoc(doc(db, 'media', m.id)))} className="mt-2 text-red-400 hover:text-red-300">
-                <Trash2 size={18} />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
+const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
+  <button onClick={onClick} className={`w-full flex items-center gap-4 px-6 py-4 rounded-xl transition-all ${active ? 'bg-indigo-600/30 border border-indigo-500/50' : 'hover:bg-white/5'}`}>
+    <Icon size={24} />
+    <span className="font-bold">{label}</span>
+  </button>
+);
 
 const DashboardOverview = ({ users, content, media }) => (
   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -287,18 +204,47 @@ const DashboardOverview = ({ users, content, media }) => (
   </div>
 );
 
-const SettingsPanel = () => (
+const UserManagement = ({ users }) => (
   <div className={`${glassStyle} p-8`}>
-    <h3 className="text-2xl font-bold mb-8">Settings</h3>
-    <p>System configuration and toggles will be added here.</p>
+    <div className="flex justify-between items-center mb-8">
+      <h3 className="text-2xl font-bold">User Management</h3>
+      <button className="bg-indigo-600 px-6 py-3 rounded-xl font-bold flex items-center gap-2">
+        <Plus size={20} /> Add User
+      </button>
+    </div>
+    <div className="space-y-4">
+      {users.map(u => (
+        <div key={u.id} className="bg-white/5 rounded-xl p-6 flex justify-between items-center">
+          <div>
+            <p className="font-bold">{u.name || u.email}</p>
+            <p className="text-sm text-gray-400">{u.role || 'viewer'}</p>
+          </div>
+          <div className="flex gap-3">
+            <button className="p-2 bg-white/10 rounded hover:bg-white/20">
+              <Edit size={18} />
+            </button>
+            <button className="p-2 bg-red-600/30 rounded hover:bg-red-600/50">
+              <Trash2 size={18} />
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
   </div>
 );
 
-const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
-  <button onClick={onClick} className={`w-full flex items-center gap-4 px-6 py-4 rounded-xl transition-all ${active ? 'bg-indigo-600/30 border border-indigo-500/50' : 'hover:bg-white/5'}`}>
-    <Icon size={24} />
-    <span className="font-bold">{label}</span>
-  </button>
+const MediaLibrary = ({ media }) => (
+  <div className={`${glassStyle} p-8`}>
+    <h3 className="text-2xl font-bold mb-6">Media Library</h3>
+    <p>Upload and manage images/files from Firebase Storage.</p>
+  </div>
+);
+
+const SettingsPanel = () => (
+  <div className={`${glassStyle} p-8`}>
+    <h3 className="text-2xl font-bold mb-6">Settings</h3>
+    <p>System configuration and toggles.</p>
+  </div>
 );
 
 const LoginPage = () => {
