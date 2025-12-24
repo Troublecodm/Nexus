@@ -22,7 +22,8 @@ import {
   query, 
   orderBy, 
   serverTimestamp,
-  getDoc
+  getDoc,
+  limit
 } from 'firebase/firestore';
 
 const firebaseConfig = {
