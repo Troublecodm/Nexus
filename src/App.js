@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Shield, Users, FileText, Image, Settings, LogOut, Menu, Plus, Trash2, Edit, Save, X, Upload, ToggleLeft, ToggleRight
+  Shield, Users, FileText, Image, Settings, LogOut, Menu, Plus, Trash2, Edit, BarChart3
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -21,7 +21,6 @@ import {
   orderBy, 
   serverTimestamp
 } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAhB-uq-rbk5z1E8-JLuz_cAmyooGWSpgo",
@@ -35,7 +34,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
 const glassStyle = "bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl";
 const inputStyle = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition-all";
@@ -102,81 +100,6 @@ export default function App() {
   );
 }
 
-// Updated ContentManagement with Published toggle
-
-const ContentManagement = ({ content }) => {
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ title: '', body: '', type: 'post', published: true });
-
-  const handleSave = async () => {
-    if (editing) {
-      await updateDoc(doc(db, 'content', editing), form);
-    } else {
-      await addDoc(collection(db, 'content'), { ...form, createdAt: serverTimestamp() });
-    }
-    setEditing(null);
-    setForm({ title: '', body: '', type: 'post', published: true });
-  };
-
-  return (
-    <div className={`${glassStyle} p-8`}>
-      <div className="flex justify-between items-center mb-8">
-        <h3 className="text-2xl font-bold">Content Management</h3>
-        <button onClick={() => setEditing('new')} className="bg-indigo-600 px-6 py-3 rounded-xl font-bold flex items-center gap-2">
-          <Plus size={20} /> New Content
-        </button>
-      </div>
-      <div className="space-y-4">
-        {content.map(c => (
-          <div key={c.id} className="bg-white/5 rounded-xl p-6 flex justify-between items-center">
-            <div>
-              <p className="font-bold">{c.title}</p>
-              <div className="flex items-center gap-4 mt-2">
-                <p className="text-sm text-gray-400">{c.type}</p>
-                <div className="flex items-center gap-2">
-                  {c.published ? <ToggleRight size={20} className="text-green-500" /> : <ToggleLeft size={20} className="text-gray-500" />}
-                  <span className="text-sm">{c.published ? 'Published' : 'Draft'}</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => { setEditing(c.id); setForm(c); }} className="p-2 bg-white/10 rounded hover:bg-white/20">
-                <Edit size={18} />
-              </button>
-              <button onClick={() => deleteDoc(doc(db, 'content', c.id))} className="p-2 bg-red-600/30 rounded hover:bg-red-600/50">
-                <Trash2 size={18} />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-      {editing && (
-        <div className="mt-8 p-6 bg-white/10 rounded-xl">
-          <input className={inputStyle + " mb-4"} placeholder="Title" value={form.title} onChange={e => setForm({...form, title: e.target.value})} />
-          <textarea className={inputStyle + " mb-4 h-32"} placeholder="Body" value={form.body} onChange={e => setForm({...form, body: e.target.value})} />
-          <select className={inputStyle + " mb-4"} value={form.type} onChange={e => setForm({...form, type: e.target.value})}>
-            <option value="post">Post</option>
-            <option value="page">Page</option>
-            <option value="product">Product</option>
-          </select>
-          <div className="flex items-center gap-3 mb-6">
-            <button onClick={() => setForm({...form, published: !form.published})} className={`w-16 h-8 rounded-full relative transition ${form.published ? 'bg-green-600' : 'bg-gray-600'}`}>
-              <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition ${form.published ? 'left-9' : 'left-1'}`} />
-            </button>
-            <span className="font-bold">{form.published ? 'Published' : 'Draft'}</span>
-          </div>
-          <div className="flex gap-4">
-            <button onClick={handleSave} className="bg-green-600 px-6 py-3 rounded-xl font-bold">Save</button>
-            <button onClick={() => setEditing(null)} className="bg-gray-600 px-6 py-3 rounded-xl font-bold">Cancel</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Keep other components (UserManagement, MediaLibrary, DashboardOverview, SettingsPanel, LoginPage) as before
-
 const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
   <button onClick={onClick} className={`w-full flex items-center gap-4 px-6 py-4 rounded-xl transition-all ${active ? 'bg-indigo-600/30 border border-indigo-500/50' : 'hover:bg-white/5'}`}>
     <Icon size={24} />
@@ -233,17 +156,46 @@ const UserManagement = ({ users }) => (
   </div>
 );
 
+const ContentManagement = ({ content }) => (
+  <div className={`${glassStyle} p-8`}>
+    <div className="flex justify-between items-center mb-8">
+      <h3 className="text-2xl font-bold">Content Management</h3>
+      <button className="bg-indigo-600 px-6 py-3 rounded-xl font-bold flex items-center gap-2">
+        <Plus size={20} /> New Content
+      </button>
+    </div>
+    <div className="space-y-4">
+      {content.map(c => (
+        <div key={c.id} className="bg-white/5 rounded-xl p-6 flex justify-between items-center">
+          <div>
+            <p className="font-bold">{c.title || 'Untitled'}</p>
+            <p className="text-sm text-gray-400">{c.type || 'post'}</p>
+          </div>
+          <div className="flex gap-3">
+            <button className="p-2 bg-white/10 rounded hover:bg-white/20">
+              <Edit size={18} />
+            </button>
+            <button className="p-2 bg-red-600/30 rounded hover:bg-red-600/50">
+              <Trash2 size={18} />
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
 const MediaLibrary = ({ media }) => (
   <div className={`${glassStyle} p-8`}>
     <h3 className="text-2xl font-bold mb-6">Media Library</h3>
-    <p>Upload and manage images/files from Firebase Storage.</p>
+    <p>Upload and manage images/files.</p>
   </div>
 );
 
 const SettingsPanel = () => (
   <div className={`${glassStyle} p-8`}>
     <h3 className="text-2xl font-bold mb-6">Settings</h3>
-    <p>System configuration and toggles.</p>
+    <p>System configuration.</p>
   </div>
 );
 
