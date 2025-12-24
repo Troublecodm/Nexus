@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Shield, Users, FileText, Image, Settings, LogOut, Menu, Plus, Trash2, Edit, Save, X, Upload
+  Shield, Users, FileText, Image, Settings, LogOut, Menu, Plus, Trash2, Edit, BarChart3
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -21,7 +21,6 @@ import {
   orderBy, 
   serverTimestamp
 } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAhB-uq-rbk5z1E8-JLuz_cAmyooGWSpgo",
@@ -35,7 +34,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
 const glassStyle = "bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl";
 const inputStyle = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition-all";
@@ -102,8 +100,6 @@ export default function App() {
   );
 }
 
-// Components
-
 const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
   <button onClick={onClick} className={`w-full flex items-center gap-4 px-6 py-4 rounded-xl transition-all ${active ? 'bg-indigo-600/30 border border-indigo-500/50' : 'hover:bg-white/5'}`}>
     <Icon size={24} />
@@ -112,7 +108,7 @@ const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
 );
 
 const DashboardOverview = ({ users, content, media }) => (
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
     <div className={`${glassStyle} p-8`}>
       <Users size={48} className="text-indigo-400 mb-4" />
       <h3 className="text-xl font-bold mb-2">Total Users</h3>
@@ -173,7 +169,7 @@ const ContentManagement = ({ content }) => (
         <div key={c.id} className="bg-white/5 rounded-xl p-6 flex justify-between items-center">
           <div>
             <p className="font-bold">{c.title || 'Untitled'}</p>
-            <p className="text-sm text-gray-400">{c.type || 'post'}</p>
+            <p className="text-sm text-gray-400">Published</p>
           </div>
           <div className="flex gap-3">
             <button className="p-2 bg-white/10 rounded hover:bg-white/20">
@@ -193,10 +189,9 @@ const MediaLibrary = ({ media }) => (
   <div className={`${glassStyle} p-8`}>
     <div className="flex justify-between items-center mb-8">
       <h3 className="text-2xl font-bold">Media Library</h3>
-      <label className="bg-indigo-600 px-6 py-3 rounded-xl font-bold flex items-center gap-2 cursor-pointer">
-        <Upload size={20} /> Upload
-        <input type="file" className="hidden" />
-      </label>
+      <button className="bg-indigo-600 px-6 py-3 rounded-xl font-bold flex items-center gap-2">
+        <Plus size={20} /> Upload
+      </button>
     </div>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
       {media.map(m => (
